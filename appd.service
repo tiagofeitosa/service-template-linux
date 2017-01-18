@@ -1,0 +1,11 @@
+[Unit]
+Description=Appd deamon
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/appd start
+ExecStop=/usr/bin/appd stop
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+# Service start | stop | restart | install | uninstall
+
+start() {
+  # Pega PID do processo app.sh
+  PID=`pgrep bash -a | grep app.sh | awk -F" " '{print $1}'`
+  # Checa se existe PID
+  if [ "$PID" == "" ]; then
+    /opt/services/app/app.sh &
+    echo "[ INFO ] serviço iniciado ("$(date)")" >> /var/log/app/app.log
+  else
+    echo "[ WARN ] já existe uma instância em execução ("$(date)")" >> /var/log/app/app.log
+  fi
+}
+
+stop() {
+  # Mata processo app.sh
+  pgrep bash -a | grep app.sh | awk -F" " '{print $1}' | xargs kill -9
+  if [ $? -eq 0 ]; then
+    echo "[ INFO ] serviço terminado ("$(date)")" >> /var/log/app/app.log
+  else
+    echo "[ ERRO ] erro ao finalizar serviço ("$(date)")" >> /var/log/app/app.log
+  fi
+}
+
+restart() {
+  stop
+  sleep 3
+  start
+}
+
+install() {
+  # Cria estrutura de diretórios
+  mkdir -v -p /opt/services/app
+  mkdir -v -p /var/log/app
+
+  # Copia todos os arqivos do diretório atual para a nova estrutura em /opt
+  cp -v -r . /opt/services/app
+
+  # Cria links simbólicos para o daemon.service, logrotate e para o daemon e /usr/bin
+  ln -v -s /opt/services/app/appd.service /etc/systemd/system/multi-user.target.wants
+  ln -v -s /opt/services/app/applog /etc/logrotate.d/applog
+  ln -v -s /opt/services/app/appd /usr/bin/appd
+
+  # Recarrega os deamons e habilita início com o boot
+  systemctl daemon-reload
+  systemctl enabled appd.service
+}
+
+uninstall() {
+  # Parando serviço e desabilitando início automático com o boot
+  stop
+  systemctl disabled appd.service
+
+  # Removendo links simbólicos
+  rm -v /usr/bin/appd
+  rm -v /etc/logrotate.d/applog
+  rm -v /etc/systemd/system/multi-user.target.wants/appd.service
+
+  # Removendo logs e diretório de log
+  rm -v -rf /var/log/app
+}
+
+case $1 in
+  install )
+    install
+    ;;
+
+  uninstall )
+    uninstall
+    ;;
+
+  start )
+    start
+    ;;
+
+  stop )
+    stop
+    ;;
+
+  restart )
+    restart
+    ;;
+esac

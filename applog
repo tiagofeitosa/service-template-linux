@@ -1,0 +1,7 @@
+/var/log/app/app.log {
+  daily
+  rotate 30
+  missingok
+  notifempty
+  create 644 root root
+}
